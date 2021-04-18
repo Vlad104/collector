@@ -2,7 +2,7 @@
 
 const TelegramBot = require('node-telegram-bot-api');
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-const defaultConfig = require('../config.json')
+const { Workers: WorkersConfig } = require('../config')
 const _ = require('lodash');
 const workers = require('../Workers');
 
@@ -11,20 +11,31 @@ const { serialize, makeButton, makeOptions } = require('../utils')
 const commands = ['Info', 'Restart', 'All'];
 
 const commandsButtons = [commands.map(command => makeButton(command))];
-const workersButtonsInfo = _.chunk(Object.keys(defaultConfig.workers).map(key => makeButton(key, 'Info')), [size=5]);
-const workersButtonsRestart = _.chunk(Object.keys(defaultConfig.workers).map(key => makeButton(key, 'Restart')), [size=5]);
-
-Object.keys(defaultConfig.workers)
+const workersButtonsInfo = _.chunk(Object.keys(WorkersConfig).map(key => makeButton(key, 'Info')), [size=5]);
+const workersButtonsRestart = _.chunk(Object.keys(WorkersConfig).map(key => makeButton(key, 'Restart')), [size=5]);
 
 bot.on('message', (message) => {
   const key = message.text.toUpperCase();
+  const [cmd, workerName, arg] = key.split(' ');
+
+  if (cmd === 'R') {
+    const worker = workers.get(workerName);
+
+    if (worker && arg) {
+      setTimeout(() => {
+        worker.setRestartAction();
+      }, parseInt(arg) * 60 * 1000);
+      bot.sendMessage(message.chat.id, `Таймер на рестарт черер ${arg} минут установлен для воркера ${worker}`);
+      return;
+    }
+  }
 
   bot.sendMessage(message.chat.id, 'Действие', makeOptions(commandsButtons));
 });
 
 bot.on('callback_query', function (message) {
   if (message.data === 'All') {
-    bot.sendMessage(message.from.id, serialize(workers.all()));
+    bot.sendMessage(message.from.id, workers.list());
     return;
   }
 
