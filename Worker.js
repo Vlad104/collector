@@ -12,7 +12,7 @@ class Worker {
   }
 
   isActual() {
-    return this.updatedAt && (this.updatedAt + EXPIRE_MS > Date.now());
+    return !!this.updatedAt && (this.updatedAt + EXPIRE_MS > Date.now());
   }
 
   getAction () {
